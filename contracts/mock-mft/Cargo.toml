@@ -1,0 +1,13 @@
+[package]
+name = "mock-mft"
+version = "0.0.1"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+uint = { version = "=0.9.0", default-features = false }
+near-sdk = "5.1.0"
+near-contract-standards = "5.1.0"
