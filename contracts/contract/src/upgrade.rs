@@ -7,7 +7,11 @@ impl Contract {
     #[private]
     #[init(ignore_state)]
     pub fn migrate_state() -> Self {
-        env::state_read().unwrap()
+        let mut contract: Contract = env::state_read().expect("NOT INIT");
+        contract.data = match contract.data {
+            VersionedContractData::V1000(data) => VersionedContractData::V1000(data),
+        };
+        contract
     }
 
     /// Returns semver of this contract.

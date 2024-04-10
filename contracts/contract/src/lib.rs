@@ -52,6 +52,14 @@ impl Contract {
             }),
         }
     }
+
+    #[payable]
+    pub fn set_owner_id(&mut self, owner_id: AccountId) {
+        assert_one_yocto();
+        self.assert_owner();
+        self.data_mut().owner_id = owner_id;
+    }
+
 }
 
 impl Contract {
