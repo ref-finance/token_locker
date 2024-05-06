@@ -1,5 +1,5 @@
 use near_sdk::{
-    assert_one_yocto, borsh::BorshSerialize, collections::UnorderedMap, env, is_promise_success,
+    assert_one_yocto, borsh::BorshSerialize, collections::{UnorderedMap, UnorderedSet}, env, is_promise_success,
     json_types::U128, log, near, require, serde_json::{self, json}, AccountId, BorshStorageKey,
     Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
 };
@@ -22,12 +22,14 @@ pub use view::*;
 #[borsh(crate = "near_sdk::borsh")]
 enum StorageKey {
     Accounts,
+    WhiteList,
 }
 
 #[near(serializers = [borsh])]
 pub struct ContractData {
     owner_id: AccountId,
     accounts: UnorderedMap<AccountId, VAccount>,
+    token_white_list: UnorderedSet<AccountId>,
 }
 
 #[near(serializers = [borsh])]
@@ -49,6 +51,7 @@ impl Contract {
             data: VersionedContractData::V1000(ContractData {
                 owner_id,
                 accounts: UnorderedMap::new(StorageKey::Accounts),
+                token_white_list: UnorderedSet::new(StorageKey::WhiteList),
             }),
         }
     }
@@ -60,6 +63,24 @@ impl Contract {
         self.data_mut().owner_id = owner_id;
     }
 
+    #[payable]
+    pub fn extend_token_white_list(&mut self, token_ids: Vec<AccountId>) {
+        assert_one_yocto();
+        self.assert_owner();
+        for token_id in token_ids {
+            self.data_mut().token_white_list.insert(&token_id);
+        }
+    }
+
+    #[payable]
+    pub fn remove_token_white_list(&mut self, token_ids: Vec<AccountId>) {
+        assert_one_yocto();
+        self.assert_owner();
+        for token_id in token_ids {
+            let is_success = self.data_mut().token_white_list.remove(&token_id);
+            assert!(is_success, "Invalid token id");
+        }
+    }
 }
 
 impl Contract {
@@ -83,6 +104,13 @@ impl Contract {
         require!(
             env::predecessor_account_id() == self.data().owner_id,
             "NOT ALLOWED"
+        );
+    }
+
+    pub fn assert_white_list_token(&self, token_id: &AccountId) {
+        require!(
+            self.data().token_white_list.contains(token_id),
+            "NOT WHITE LIST TOKEN"
         );
     }
 }

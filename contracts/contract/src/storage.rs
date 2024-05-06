@@ -18,7 +18,7 @@ impl StorageManagement for Contract {
         let account_id = account_id.unwrap_or_else(|| env::predecessor_account_id());
         let already_registered = self.internal_get_account(&account_id).is_some();
         if amount < STORAGE_BALANCE_MIN_BOUND && !already_registered {
-            env::panic_str("Insufficient depost");
+            env::panic_str("Insufficient deposit");
         }
 
         if already_registered {

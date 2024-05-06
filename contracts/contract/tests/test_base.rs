@@ -17,6 +17,8 @@ async fn test_base() -> Result<()> {
     let ft_token_contract = deploy_mock_ft(&root).await?;
     let mft_token_contract = deploy_mock_mft(&root).await?;
 
+    check!(extend_token_white_list(&token_locker_contract, &root, vec![ft_token_contract.id(), mft_token_contract.id()]));
+
     check!(logs storage_deposit(&token_locker_contract, &alice.id()));
     check!(storage_deposit(&ft_token_contract, &alice.id()));
     check!(storage_deposit(&ft_token_contract, &token_locker_contract.id()));
@@ -101,6 +103,22 @@ async fn test_base() -> Result<()> {
     Ok(())
 }
 
+pub async fn extend_token_white_list(
+    contract: &Contract,
+    sender: &Account,
+    token_ids: Vec<&AccountId>,
+) -> Result<ExecutionFinalResult> {
+    sender
+        .call(contract.id(), "extend_token_white_list")
+        .args_json(json!({
+            "token_ids": token_ids,
+        }))
+        .max_gas()
+        .deposit(NearToken::from_yoctonear(1))
+        .transact()
+        .await
+}
+
 pub async fn withdraw(
     contract: &Contract,
     sender: &Account,
@@ -114,6 +132,7 @@ pub async fn withdraw(
             "amount": amount
         }))
         .max_gas()
+        .deposit(NearToken::from_yoctonear(1))
         .transact()
         .await
 }

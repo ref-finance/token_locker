@@ -5,6 +5,7 @@ use crate::*;
 pub struct Metadata {
     owner_id: AccountId,
     current_account_num: u64,
+    token_white_list: Vec<AccountId>,
 }
 
 #[near]
@@ -13,6 +14,7 @@ impl Contract {
         Metadata {
             owner_id: self.data().owner_id.clone(),
             current_account_num: self.data().accounts.len(),
+            token_white_list: self.data().token_white_list.to_vec(),
         }
     }
 

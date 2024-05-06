@@ -16,15 +16,10 @@ pub fn generate_mft_token_id(token_id: String) -> String {
 }
 
 pub fn parse_token_id(token_id: &String) -> (AccountId, Option<String>) {
-    let v: Vec<&str> = token_id.split(MFT_TAG).collect();
-    if v.len() == 1 {
-        let contract_id: AccountId = v[0].parse().unwrap();
-        (contract_id, None)
-    } else if v.len() == 2 {
-        let contract_id: AccountId = v[0].parse().unwrap();
-        (contract_id, Some(v[1].to_string()))
+    if let Some((contract_id, mft_token_id)) = token_id.split_once(MFT_TAG) {
+        (contract_id.parse().unwrap(), Some(mft_token_id.to_string()))
     } else {
-        env::panic_str("INVALID TOKEN ID");
+        (token_id.parse().unwrap(), None)
     }
 }
 

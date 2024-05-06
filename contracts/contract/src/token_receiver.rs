@@ -16,6 +16,7 @@ impl FungibleTokenReceiver for Contract {
         msg: String,
     ) -> PromiseOrValue<U128> {
         let token_id = env::predecessor_account_id();
+        self.assert_white_list_token(&token_id);
         let mut account = self.internal_unwrap_account(&sender_id);
 
         let message = serde_json::from_str::<TokenReceiverMessage>(&msg).expect("INVALID MSG");
@@ -66,6 +67,7 @@ impl MFTTokenReceiver for Contract {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        self.assert_white_list_token(&env::predecessor_account_id());
         let token_id = generate_mft_token_id(token_id);
         let mut account = self.internal_unwrap_account(&sender_id);
 

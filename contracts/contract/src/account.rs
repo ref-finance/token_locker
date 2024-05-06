@@ -91,7 +91,10 @@ impl Contract {
 
 #[near]
 impl Contract {
+    
+    #[payable]
     pub fn withdraw(&mut self, token_id: String, amount: Option<U128>) {
+        assert_one_yocto();
         let account_id = env::predecessor_account_id();
         let mut account = self.internal_unwrap_account(&account_id);
 
