@@ -6,6 +6,7 @@ pub struct Metadata {
     owner_id: AccountId,
     current_account_num: u64,
     token_white_list: Vec<AccountId>,
+    burn_account_id: Option<AccountId>,
 }
 
 #[near]
@@ -15,6 +16,7 @@ impl Contract {
             owner_id: self.data().owner_id.clone(),
             current_account_num: self.data().accounts.len(),
             token_white_list: self.data().token_white_list.to_vec(),
+            burn_account_id: self.data().burn_account_id.clone(),
         }
     }
 

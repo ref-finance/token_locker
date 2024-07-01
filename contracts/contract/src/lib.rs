@@ -8,10 +8,12 @@ mod account;
 mod event;
 mod storage;
 mod token_receiver;
+mod legacy;
 mod upgrade;
 mod utils;
 mod view;
 pub use account::*;
+pub use legacy::*;
 pub use event::*;
 pub use storage::*;
 pub use token_receiver::*;
@@ -30,11 +32,13 @@ pub struct ContractData {
     owner_id: AccountId,
     accounts: UnorderedMap<AccountId, VAccount>,
     token_white_list: UnorderedSet<AccountId>,
+    burn_account_id: Option<AccountId>,
 }
 
 #[near(serializers = [borsh])]
 pub enum VersionedContractData {
-    V1000(ContractData),
+    V1000(ContractDataV1000),
+    V1001(ContractData),
 }
 
 #[derive(PanicOnDefault)]
@@ -48,10 +52,11 @@ impl Contract {
     #[init]
     pub fn new(owner_id: AccountId) -> Self {
         Self {
-            data: VersionedContractData::V1000(ContractData {
+            data: VersionedContractData::V1001(ContractData {
                 owner_id,
                 accounts: UnorderedMap::new(StorageKey::Accounts),
                 token_white_list: UnorderedSet::new(StorageKey::WhiteList),
+                burn_account_id: None
             }),
         }
     }
@@ -61,6 +66,13 @@ impl Contract {
         assert_one_yocto();
         self.assert_owner();
         self.data_mut().owner_id = owner_id;
+    }
+
+    #[payable]
+    pub fn set_burn_account_id(&mut self, burn_account_id: AccountId) {
+        assert_one_yocto();
+        self.assert_owner();
+        self.data_mut().burn_account_id = Some(burn_account_id);
     }
 
     #[payable]
@@ -87,7 +99,7 @@ impl Contract {
     #[allow(unreachable_patterns)]
     fn data(&self) -> &ContractData {
         match &self.data {
-            VersionedContractData::V1000(data) => data,
+            VersionedContractData::V1001(data) => data,
             _ => unimplemented!(),
         }
     }
@@ -95,7 +107,7 @@ impl Contract {
     #[allow(unreachable_patterns)]
     fn data_mut(&mut self) -> &mut ContractData {
         match &mut self.data {
-            VersionedContractData::V1000(data) => data,
+            VersionedContractData::V1001(data) => data,
             _ => unimplemented!(),
         }
     }

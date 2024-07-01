@@ -41,6 +41,26 @@ pub enum Event<'a> {
         token_id: &'a String,
         amount: &'a U128,
     },
+    BurnStarted {
+        account_id: &'a AccountId,
+        token_id: &'a String,
+        amount: &'a U128,
+    },
+    BurnSucceeded {
+        account_id: &'a AccountId,
+        token_id: &'a String,
+        amount: &'a U128,
+    },
+    BurnFailed {
+        account_id: &'a AccountId,
+        token_id: &'a String,
+        amount: &'a U128,
+    },
+    BurnLostfound {
+        account_id: &'a AccountId,
+        token_id: &'a String,
+        amount: &'a U128,
+    },
     AccountRegister {
         account_id: &'a AccountId,
     },
