@@ -127,6 +127,37 @@ impl Contract {
         }
     }
 
+    #[payable]
+    pub fn burn(&mut self, token_id: String, amount: Option<U128>) {
+        assert_one_yocto();
+        let account_id = env::predecessor_account_id();
+        let mut account = self.internal_unwrap_account(&account_id);
+
+        if let Some(mut lock_info) = account.locked_tokens.remove(&token_id) {
+            let amount = amount.unwrap_or(lock_info.locked_balance);
+            lock_info.locked_balance = U128(
+                lock_info
+                    .locked_balance
+                    .0
+                    .checked_sub(amount.0)
+                    .expect("Lock balance not enough"),
+            );
+            if lock_info.locked_balance.0 > 0 {
+                account.locked_tokens.insert(token_id.clone(), lock_info);
+            }
+            self.internal_set_account(&account_id, account);
+            self.burn_token(&account_id, token_id.clone(), amount);
+            Event::BurnStarted {
+                account_id: &account_id,
+                token_id: &token_id,
+                amount: &amount,
+            }
+            .emit();
+        } else {
+            env::panic_str("Invalid token_id");
+        }
+    }
+
     #[private]
     pub fn after_token_transfer(
         &mut self,
@@ -174,6 +205,54 @@ impl Contract {
         }
         promise_success
     }
+
+    #[private]
+    pub fn after_token_burn(
+        &mut self,
+        account_id: AccountId,
+        token_id: String,
+        amount: U128,
+    ) -> bool {
+        let promise_success = is_promise_success();
+        if !promise_success {
+            if let Some(mut account) = self.internal_get_account(&account_id) {
+                if let Some(lock_info) = account.locked_tokens.get_mut(&token_id.to_string()) {
+                    lock_info.locked_balance = U128(lock_info.locked_balance.0 + amount.0);
+                } else {
+                    account.locked_tokens.insert(
+                        token_id.clone(),
+                        LockInfo {
+                            locked_balance: amount,
+                            unlock_time_sec: nano_to_sec(env::block_timestamp()),
+                        },
+                    );
+                }
+                self.internal_set_account(&account_id, account);
+                Event::BurnFailed {
+                    account_id: &account_id,
+                    token_id: &token_id,
+                    amount: &amount,
+                }
+                .emit();
+            } else {
+                Event::BurnLostfound {
+                    account_id: &account_id,
+                    token_id: &token_id,
+                    amount: &amount,
+                }
+                .emit();
+            }
+        } else {
+            Event::BurnSucceeded {
+                account_id: &account_id,
+                token_id: &token_id,
+                amount: &amount,
+            }
+            .emit();
+            
+        }
+        promise_success
+    }
 }
 
 impl Contract {
@@ -198,6 +277,32 @@ impl Contract {
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_FOR_AFTER_TOKEN_TRANSFER)
                         .after_token_transfer(account_id.clone(), token_id.to_string(), amount),
+                )
+        };
+    }
+
+    pub fn burn_token(&self, account_id: &AccountId, token_id: String, amount: U128) {
+        let burn_account_id = self.data().burn_account_id.clone().expect("Missing burn_account_id");
+        let (contract_id, mft_token_id) = parse_token_id(&token_id);
+        if let Some(mft_token_id) = mft_token_id {
+            ext_multi_fungible_token::ext(contract_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .with_static_gas(GAS_FOR_TOKEN_TRANSFER)
+                .mft_transfer(mft_token_id, burn_account_id, amount, None)
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_FOR_AFTER_TOKEN_BURN)
+                        .after_token_burn(account_id.clone(), token_id.clone(), amount),
+                )
+        } else {
+            ext_fungible_token::ext(contract_id.clone())
+                .with_attached_deposit(NearToken::from_yoctonear(1))
+                .with_static_gas(GAS_FOR_TOKEN_TRANSFER)
+                .ft_transfer(burn_account_id, amount, None)
+                .then(
+                    Self::ext(env::current_account_id())
+                        .with_static_gas(GAS_FOR_AFTER_TOKEN_BURN)
+                        .after_token_burn(account_id.clone(), token_id.to_string(), amount),
                 )
         };
     }

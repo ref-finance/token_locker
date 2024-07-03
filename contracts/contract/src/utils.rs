@@ -3,6 +3,7 @@ use near_sdk::ext_contract;
 
 pub const GAS_FOR_TOKEN_TRANSFER: Gas = Gas::from_tgas(20);
 pub const GAS_FOR_AFTER_TOKEN_TRANSFER: Gas = Gas::from_tgas(10);
+pub const GAS_FOR_AFTER_TOKEN_BURN: Gas = Gas::from_tgas(10);
 
 pub const MFT_TAG: &str = "@";
 pub const MAX_LOCK_NUM: usize = 64;
