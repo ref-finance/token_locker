@@ -135,6 +135,7 @@ impl Contract {
 
         if let Some(mut lock_info) = account.locked_tokens.remove(&token_id) {
             let amount = amount.unwrap_or(lock_info.locked_balance);
+            let unlock_time_sec = lock_info.unlock_time_sec;
             lock_info.locked_balance = U128(
                 lock_info
                     .locked_balance
@@ -146,7 +147,7 @@ impl Contract {
                 account.locked_tokens.insert(token_id.clone(), lock_info);
             }
             self.internal_set_account(&account_id, account);
-            self.burn_token(&account_id, token_id.clone(), amount);
+            self.burn_token(&account_id, token_id.clone(), amount, unlock_time_sec);
             Event::BurnStarted {
                 account_id: &account_id,
                 token_id: &token_id,
@@ -212,6 +213,7 @@ impl Contract {
         account_id: AccountId,
         token_id: String,
         amount: U128,
+        unlock_time_sec: u32,
     ) -> bool {
         let promise_success = is_promise_success();
         if !promise_success {
@@ -223,7 +225,7 @@ impl Contract {
                         token_id.clone(),
                         LockInfo {
                             locked_balance: amount,
-                            unlock_time_sec: nano_to_sec(env::block_timestamp()),
+                            unlock_time_sec,
                         },
                     );
                 }
@@ -281,7 +283,7 @@ impl Contract {
         };
     }
 
-    pub fn burn_token(&self, account_id: &AccountId, token_id: String, amount: U128) {
+    pub fn burn_token(&self, account_id: &AccountId, token_id: String, amount: U128, unlock_time_sec: u32) {
         let burn_account_id = self.data().burn_account_id.clone().expect("Missing burn_account_id");
         let (contract_id, mft_token_id) = parse_token_id(&token_id);
         if let Some(mft_token_id) = mft_token_id {
@@ -292,7 +294,7 @@ impl Contract {
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_FOR_AFTER_TOKEN_BURN)
-                        .after_token_burn(account_id.clone(), token_id.clone(), amount),
+                        .after_token_burn(account_id.clone(), token_id.clone(), amount, unlock_time_sec),
                 )
         } else {
             ext_fungible_token::ext(contract_id.clone())
@@ -302,7 +304,7 @@ impl Contract {
                 .then(
                     Self::ext(env::current_account_id())
                         .with_static_gas(GAS_FOR_AFTER_TOKEN_BURN)
-                        .after_token_burn(account_id.clone(), token_id.to_string(), amount),
+                        .after_token_burn(account_id.clone(), token_id.to_string(), amount, unlock_time_sec),
                 )
         };
     }
