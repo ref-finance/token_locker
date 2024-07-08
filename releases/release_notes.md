@@ -2,7 +2,7 @@
 
 Version 0.2.0
 ```bash=
-# codehash: 7yHXGgNxH7i1WNew378WVZPWRtZo4sFZi7MhZDjmPB62
+# codehash: 53f1L7tJd4Pts1hxrnyvEhMiEChqfs2N7bBTKcUFU8gT
 ```
 - add burn function.
 
